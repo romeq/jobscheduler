@@ -9,32 +9,38 @@ import (
 type Job struct {
 	Function        func()
 	Interval        time.Duration
-	ExecuteCount    int
+	executeCount    int
+	doneChannel     chan bool
 	MaxExecuteCount int
 	ExecOnInit      bool
-	lock            *sync.Mutex
+	m               *sync.Mutex
 }
 
-func (j *Job) StartJob() (jobDone chan bool) {
-	for {
-		if j.MaxExecuteCount > 0 && j.ExecuteCount >= j.MaxExecuteCount {
-			jobDone <- true
-			break
-		}
-
-		if !(j.ExecOnInit && j.ExecuteCount == 0) {
-			<-time.After(j.Interval)
-		}
-
-		j.lock.Lock()
-		j.Function()
-		j.ExecuteCount++
-		j.lock.Unlock()
+func NewJob(maxCount int, interval time.Duration, fn func(), runOnInit bool) Job {
+	return Job{
+		Function:        fn,
+		Interval:        interval,
+		MaxExecuteCount: maxCount,
+		doneChannel:     make(chan bool, 1),
+		ExecOnInit:      runOnInit,
+		m:               &sync.Mutex{},
 	}
-
-	return
 }
 
 func (j *Job) Run() {
-	go j.StartJob()
+	for {
+		if j.MaxExecuteCount > 0 && j.executeCount >= j.MaxExecuteCount {
+			j.doneChannel <- true
+			break
+		}
+
+		if !(j.ExecOnInit && j.executeCount == 0) {
+			<-time.After(j.Interval)
+		}
+
+		j.m.Lock()
+		j.Function()
+		j.executeCount++
+		j.m.Unlock()
+	}
 }
