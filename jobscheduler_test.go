@@ -31,6 +31,7 @@ func TestRun(t *testing.T) {
 	}
 
 	for index, targ := range args {
+		// set an execution limit
 		go Run(targ.jobs)
 		<-time.After(time.Duration(targ.jobRunAmount) * interval)
 
