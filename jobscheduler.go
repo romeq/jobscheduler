@@ -6,6 +6,9 @@ func Run(jobs []Job) {
 		go func(task Job) {
 			task.Run()
 		}(job)
+	}
+
+	for _, job := range jobs {
 		<-job.doneChannel
 	}
 }
